@@ -18,8 +18,6 @@ fun <DFAState> DFA<DFAState>.minimalize(): DFA<ContractedDFAState<DFAState>> {
 
     val symbols = getSymbols()
 
-    listOf(1, 2, 3, 4)
-
     val acceptingStates = baseSet.filter(this::isAcceptingNullSafe)
 
     val preimageCalculator = DFAPreimageCalculator(this)
@@ -55,7 +53,7 @@ fun <DFAState> DFA<DFAState>.minimalize(): DFA<ContractedDFAState<DFAState>> {
     }.filterNotNull()
 
     val newAcceptingStates = acceptingStates.map { toNewState[it]!! }.toSet()
-    val newStartingState = toNewState[getStartingState()] ?: throw IllegalArgumentException("DFA interface does not allow automata for empty languages")
+    val newStartingState = toNewState[getStartingState()] ?: throw IllegalArgumentException("DFA interface does not allow automata for empty language")
     val newProductions = getProductions().map { (kv, result) ->
         val (from, symbol) = kv
         val newFrom = toNewState[from]

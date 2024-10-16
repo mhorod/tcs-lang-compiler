@@ -37,3 +37,18 @@ fun <DFAState> DFA<DFAState>.getProductionNullSafe(state: DFAState?, symbol: Cha
 fun <DFAState> DFA<DFAState>.getAllStatesNullSafe(): List<DFAState?> {
     return getAllStates().plus(null)
 }
+
+fun <DFAState> DFA<DFAState>.isLanguageEmpty(): Boolean {
+    val edges = getProductions().map { (kv, result) -> Pair(kv.first, result) }.groupBy({ it.first }, { it.second })
+    val seen = mutableSetOf(getStartingState())
+    val q = mutableListOf(getStartingState())
+    while (q.isNotEmpty()) {
+        val state = q.removeLast()
+        if (isAccepting(state))
+            return false
+        for (to in edges[state] ?: listOf()) {
+            if (seen.add(to)) q.add(to)
+        }
+    }
+    return true
+}
