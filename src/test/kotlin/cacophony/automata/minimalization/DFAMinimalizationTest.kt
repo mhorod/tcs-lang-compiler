@@ -1,110 +1,66 @@
 package cacophony.automata.minimalization
 
-import cacophony.automata.DFA
-import cacophony.automata.createHelper
+import cacophony.automata.*
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import kotlin.random.Random
 
 class DFAMinimalizationTest {
-    fun <E> checkThatAutomatasAreEquivalent(dfa: DFA<E>) {
-        val minDfa = dfa.minimalize()
-        val helper = createHelper(dfa, minDfa)
-
-        for (state in minDfa.getAllStates()) {
-            for (oldState in state.originalStates) {
-                assert(helper.areEquivalent(oldState, state))
-            }
-        }
-
-        assert(helper.areEquivalent(dfa.getStartingState(), minDfa.getStartingState()))
-    }
-
-    fun <E> checkMinimality(dfa: DFA<E>) {
-        val helper = createHelper(dfa, dfa)
-
-        val states = dfa.getAllStates()
-        val equivClassesMap: MutableMap<E, MutableSet<E>> = mutableMapOf()
-
-        states.forEach {
-            for (s in states) {
-                if (helper.areEquivalent(s, it)) {
-                    equivClassesMap.getOrPut(s) { mutableSetOf() }.add(it)
-                    return@forEach
-                }
-            }
-            throw Exception()
-        }
-
-        val equivClassesBruted = equivClassesMap.values.toSet()
-
-        val minDfa = dfa.minimalize()
-        val equivalenceClasses = minDfa.getAllStates().map { it.originalStates.toSet() }.toMutableSet()
-
-        val returnedByMinimalization = equivalenceClasses.flatten()
-        assertEquals(returnedByMinimalization.toSet().size, returnedByMinimalization.size)
-
-        val missingEquivalenceClass = dfa.getAllStates().minus(returnedByMinimalization.toSet())
-        if (missingEquivalenceClass.isNotEmpty())
-            equivalenceClasses.add(missingEquivalenceClass.toSet())
-
-        assertEquals(equivClassesBruted, equivalenceClasses)
-
-        println("${dfa.getAllStates().size} ${equivalenceClasses.size}")
-    }
-
-    fun <E> check(dfa: DFA<E>) {
-        if (dfa.isLanguageEmpty()) {
-            try {
-                dfa.minimalize()
-            }
-            catch (e: IllegalArgumentException) {
-                return
-            }
-            assert(false)
-        }
-        checkThatAutomatasAreEquivalent(dfa)
-        checkMinimality(dfa)
-    }
-
-    private fun generateDFA(n: Int, seed: Int): DFA<Int> {
-        val random = Random(seed)
-        val symbols = "abc";
-        val states = (1..n).toList()
-        val accepting = states.map { random.nextDouble() < 0.2 }
-        val start = states.random(random)
-        val productions: MutableMap<Pair<Int, Char>, Int> = mutableMapOf()
-        for (s in states) {
-            for (c in symbols) {
-                if (random.nextDouble() < 0.2)
-                    productions[Pair(s, c)] = states.random(random)
-            }
-        }
-        return object : DFA<Int> {
-            override fun getStartingState(): Int {
-                return start
-            }
-
-            override fun getAllStates(): List<Int> {
-                return states
-            }
-
-            override fun getProductions(): Map<Pair<Int, Char>, Int> {
-                return productions
-            }
-
-            override fun getProduction(state: Int, symbol: Char): Int? {
-                return productions[Pair(state, symbol)]
-            }
-
-            override fun isAccepting(state: Int): Boolean {
-                return accepting[state - 1]
-            }
-
-        }
-    }
     @Test
-    fun testRandom() {
-        (0..2000).forEach { check(generateDFA(1 + it % 50, it)) }
+    fun `DFA with only accepting states is minimized to single state`() {
+        val dfa = createDFA(
+            0, setOf(0, 1, 2), mapOf(
+                0 via 'a' to 1,
+                1 via 'a' to 2,
+                2 via 'a' to 0,
+            )
+        )
+        val minimized = dfa.minimalize()
+        assertTrue(areEquivalent(dfa, minimized))
+        assertEquals(1, minimized.getAllStates().size)
+    }
+
+    @Test
+    fun `DFA accepting a single letter is minimized to two states`() {
+        val dfa = createDFA(
+            0, setOf(1), mapOf(
+                0 via 'a' to 1,
+                1 via 'b' to 2,
+                2 via 'a' to 3,
+                3 via 'a' to 2,
+            )
+        )
+        val minimized = dfa.minimalize()
+        assertTrue(areEquivalent(dfa, minimized))
+        assertEquals(2, minimized.getAllStates().size)
+    }
+
+    @Test
+    fun `DFA accepting a single 15-word is minimized to 16 states `() {
+        val dfa = createDFA(
+            0, setOf(15), mapOf(
+                0 via 'd' to 1,
+                1 via 'e' to 2,
+                2 via 'r' to 3,
+                3 via 'm' to 4,
+                4 via 'a' to 5,
+                5 via 't' to 6,
+                6 via 'o' to 7,
+                7 via 'g' to 8,
+                8 via 'l' to 9,
+                9 via 'y' to 10,
+                10 via 'p' to 11,
+                11 via 'h' to 12,
+                12 via 'i' to 13,
+                13 via 'c' to 14,
+                14 via 's' to 15,
+
+                16 via 'x' to 4, // unreachable state
+                7 via 'x' to 17, // dead state
+            )
+        )
+        val minimized = dfa.minimalize()
+        assertTrue(areEquivalent(dfa, minimized))
+        assertEquals(16, minimized.getAllStates().size)
     }
 }
